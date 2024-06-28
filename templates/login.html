@@ -1,0 +1,31 @@
+{% extends "index.html" %}
+
+{% block title %}
+Log In
+{% endblock %}
+
+{% block main %}
+<form action="/login" method="post">
+    <div class="mb-3">
+        <label>
+            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="username" placeholder="Username" type="text">
+        </label>
+    </div>
+    <div class="mb-3">
+        <label for="pwinput"></label><input class="form-control mx-auto w-auto" name="password" placeholder="Password" type="password" id="pwinput">
+        <br>
+        <label for="password"></label><input type="checkbox" id="password"> Show Password
+    </div>
+    <button class="btn btn-primary" type="submit">Log In</button>
+</form>
+<script>
+    let x = document.getElementById("pwinput");
+    document.querySelector("#password").addEventListener('change', function() {
+        if (x.type === "password") {
+            x.type = "text";
+        } else {
+            x.type = "password";
+        }
+    });
+</script>
+{% endblock %}
