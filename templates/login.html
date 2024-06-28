@@ -1,4 +1,4 @@
-{% extends "index.html" %}
+{% extends "layout.html" %}
 
 {% block title %}
 Log In
@@ -7,14 +7,12 @@ Log In
 {% block main %}
 <form action="/login" method="post">
     <div class="mb-3">
-        <label>
-            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="username" placeholder="Username" type="text">
-        </label>
+        <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="username" placeholder="Username" type="text">
     </div>
     <div class="mb-3">
-        <label for="pwinput"></label><input class="form-control mx-auto w-auto" name="password" placeholder="Password" type="password" id="pwinput">
+        <input class="form-control mx-auto w-auto" name="password" placeholder="Password" type="password" id="pwinput">
         <br>
-        <label for="password"></label><input type="checkbox" id="password"> Show Password
+        <input type="checkbox" id="password"> Show Password
     </div>
     <button class="btn btn-primary" type="submit">Log In</button>
 </form>

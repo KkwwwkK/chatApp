@@ -1,4 +1,4 @@
-{% extends "index.html" %}
+{% extends "layout.html" %}
 
 {% block title %}
 Register
@@ -7,19 +7,17 @@ Register
 {% block main %}
 <form action="/register" method="post">
     <div class="mb-3">
-        <label>
-            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="username" placeholder="Username" type="text">
-        </label>
+        <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="username" placeholder="Username" type="text">
     </div>
     <div class="mb-3">
-        <label for="pwinput1"></label><input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="password" placeholder="Password" type="password" id="pwinput1">
+        <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="password" placeholder="Password" type="password" id="pwinput1">
     </div>
     <div class="mb-3">
-        <label for="pwinput2"></label><input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="confirmation" placeholder="Password Confirmation" type="password" id="pwinput2">
+        <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="confirmation" placeholder="Password Confirmation" type="password" id="pwinput2">
     </div>
     <button class="btn btn-primary" type="submit">Register</button>
 </form>
-<label for="password2"></label><input type="checkbox" id="password2" hidden>
+<input type="checkbox" id="password2" hidden>
 <script>
     let x = document.getElementById("pwinput1");
     let y = document.getElementById("pwinput2");
