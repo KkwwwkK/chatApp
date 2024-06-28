@@ -45,7 +45,6 @@ Chat Room
         </div>
     </div>
 </div>
-
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         var socket = io.connect('http://' + document.domain + ':' + location.port);
@@ -53,19 +52,34 @@ Chat Room
 
         document.querySelectorAll('.chat-room').forEach(function(element) {
             element.addEventListener('click', function() {
-                currentRoomId = this.getAttribute('data-room-id');
-                socket.emit('join', {
-                    username: "{{ user.username }}",
-                    room: currentRoomId
-                });
-                fetchChatHistory(currentRoomId);
+                var newRoomId = this.getAttribute('data-room-id');
+                if (currentRoomId !== newRoomId) {
+                    leaveCurrentRoom(currentRoomId);
+                    currentRoomId = newRoomId;
+                    socket.emit('join', {
+                        username: "{{ user.username }}",
+                        room: currentRoomId
+                    });
+                    fetchChatHistory(currentRoomId);
+                }
             });
         });
 
+        function leaveCurrentRoom(roomId) {
+            if (roomId) {
+                socket.emit('leave', {
+                    username: "{{ user.username }}",
+                    room: roomId
+                });
+            }
+        }
+
         socket.on('message', function(msg) {
             var chatHistory = document.getElementById('chat-history');
-            chatHistory.innerHTML += '<div>' + msg + '</div>';
+            chatHistory.innerHTML += '<div><strong>' + msg.username + '</strong> [' + msg.timestamp + ']: ' + msg.message + '</div><br><br>'; // Add two <br> tags
+            chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom
         });
+
 
         document.getElementById('message-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -77,6 +91,7 @@ Chat Room
                 e.target.value = '';
             }
         });
+
 
         document.getElementById('user-search-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -93,12 +108,12 @@ Chat Room
                                 listItem.className = 'clearfix chat-room';
                                 listItem.dataset.userId = user.id;
                                 listItem.innerHTML = `
-                            <img src="https://bootdey.com/img/Content/avatar/avatar1.png" alt="avatar">
-                            <div class="about">
-                                <div class="name">${user.username}</div>
-                                <div class="status"> <i class="fa fa-circle offline"></i> Last seen at ${user.last_seen}</div>
-                            </div>
-                        `;
+                                    <img src="https://bootdey.com/img/Content/avatar/avatar1.png" alt="avatar">
+                                    <div class="about">
+                                        <div class="name">${user.username}</div>
+                                        <div class="status"> <i class="fa fa-circle offline"></i> Last seen at ${user.last_seen}</div>
+                                    </div>
+                                `;
                                 listItem.addEventListener('click', function() {
                                     initiateChat(user.id);
                                 });
@@ -115,8 +130,21 @@ Chat Room
         });
 
         function fetchChatHistory(roomId) {
-            // Implement an endpoint in your Flask app to serve the chat history
+            fetch(`/chat_history/${roomId}`)
+                .then(response => response.json())
+                .then(messages => {
+                    var chatHistory = document.getElementById('chat-history');
+                    chatHistory.innerHTML = '';
+                    messages.forEach(msg => {
+                        chatHistory.innerHTML += `<div><strong>${msg.username}</strong> [${msg.timestamp}]: ${msg.content}</div><br><br>`; // Add two <br> tags
+                    });
+                    chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom
+                })
+                .catch(error => {
+                    console.error('Error fetching chat history:', error);
+                });
         }
+
 
         function initiateChat(userId) {
             fetch(`/initiate_chat`, {
@@ -136,6 +164,20 @@ Chat Room
                     fetchChatHistory(currentRoomId);
                 });
         }
+
+        // Handle leaving the room on page unload or close
+        window.addEventListener('beforeunload', function(event) {
+            leaveCurrentRoom(currentRoomId);
+        });
+
+        // Handle socket events for leaving a room
+        socket.on('user_left', function(data) {
+            var chatHistory = document.getElementById('chat-history');
+            chatHistory.innerHTML += '<div>' + data.message + '</div><br><br>'; // Add two <br> tags
+            chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom
+        });
     });
 </script>
+
+
 {% endblock %}

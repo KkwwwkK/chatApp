@@ -1,10 +1,10 @@
 from flask import Flask, redirect, render_template, request, session, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_session import Session
 from functools import wraps
-from models import db, User, ChatRoom, Message, UserChatRoom
+from models import db, User, ChatRoom, Message
 from flask_socketio import SocketIO, join_room, leave_room, send
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -122,7 +122,6 @@ def livechat():
     chat_rooms = user.chat_rooms  # Assuming a relationship is defined in the User model
     return render_template('livechat.html', user=user, chat_rooms=chat_rooms)
 
-
 @app.route('/search_user')
 @login_required
 def search_user():
@@ -131,11 +130,10 @@ def search_user():
         if not query:
             return jsonify([])
 
-        users = User.query.filter(User.username.contains(query)).all()
-        results = [{'id': user.id, 'username': user.username} for user in users]  # Remove 'last_seen'
+        users = User.query.filter(User.username.ilike(f'%{query}%')).all()
+        results = [{'id': user.id, 'username': user.username} for user in users if user.id != session['user_id']]
         return jsonify(results)
     except Exception as e:
-        # Log the exception for debugging purposes
         print(f"Exception in search_user: {str(e)}")
         return jsonify({'error': 'Internal Server Error'}), 500
 
@@ -151,7 +149,7 @@ def initiate_chat():
         if not user_id:
             return jsonify({'error': 'User ID is required'}), 400
 
-        current_user_id = session.get('user_id')  # Use session.get() to avoid KeyError
+        current_user_id = session.get('user_id')
         if not current_user_id:
             return jsonify({'error': 'Not authenticated'}), 401
 
@@ -162,8 +160,8 @@ def initiate_chat():
         ).first()
 
         if not chat_room:
-            # Create a new chat room
-            chat_room = ChatRoom(name=f"Chat between {current_user_id} and {user_id}")  # Provide a meaningful name
+            # Create a new chat room if one does not exist
+            chat_room = ChatRoom(name=f"Chat between {current_user_id} and {user_id}")
             chat_room.users.append(User.query.get(current_user_id))
             chat_room.users.append(User.query.get(user_id))
             db.session.add(chat_room)
@@ -171,10 +169,8 @@ def initiate_chat():
 
         return jsonify({'room_id': chat_room.id}), 200
     except Exception as e:
-        # Log the exception for debugging purposes
         print(f"Exception in initiate_chat: {str(e)}")
         return jsonify({'error': 'Internal Server Error'}), 500
-
 
 
 @socketio.on('join')
@@ -182,7 +178,39 @@ def on_join(data):
     username = data['username']
     room = data['room']
     join_room(room)
-    send(f'{username} has entered the room.', to=room)
+    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    send({'message': f'{username} has entered the room.', 'username': 'System', 'timestamp': timestamp}, to=room)
+
+@socketio.on('leave')
+def on_leave(data):
+    username = data['username']
+    room = data['room']
+    leave_room(room)
+    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    send({'message': f'{username} has left the room.', 'username': 'System', 'timestamp': timestamp}, to=room)
+
+
+@app.route('/leave_room', methods=['POST'])
+@login_required
+def leave_room():
+    try:
+        data = request.get_json()
+        room_id = data.get('room_id')
+
+        if not room_id:
+            return jsonify({'error': 'Room ID is required'}), 400
+
+        current_user_id = session.get('user_id')
+        if not current_user_id:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        # Implement leave room logic here (e.g., update database if needed)
+
+        return jsonify({'message': 'Left room successfully'}), 200
+    except Exception as e:
+        print(f"Exception in leave_room: {str(e)}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
 
 
 @socketio.on('message')
@@ -190,10 +218,26 @@ def handle_message(data):
     room = data['room']
     message = data['message']
     user_id = session['user_id']
+    user = User.query.get(user_id)
     new_message = Message(content=message, chat_room_id=room, user_id=user_id)
     db.session.add(new_message)
     db.session.commit()
-    send(message, to=room)
+    send({'message': message, 'username': user.username, 'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')}, to=room)
+
+
+@app.route('/chat_history/<int:room_id>')
+@login_required
+def chat_history(room_id):
+    messages = Message.query.filter_by(chat_room_id=room_id).all()
+    return jsonify([
+        {
+            'content': message.content,
+            'username': message.user.username,
+            'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        for message in messages
+    ])
+
 
 
 if __name__ == "__main__":
