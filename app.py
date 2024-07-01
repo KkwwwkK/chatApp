@@ -44,7 +44,6 @@ def login_required(f):
 @app.route("/")
 @login_required
 def index():
-    """Show TBD"""
     return render_template("index.html")
 
 
@@ -119,7 +118,7 @@ def register():
 def livechat():
     user_id = session['user_id']
     user = User.query.get(user_id)
-    chat_rooms = user.chat_rooms  # Assuming a relationship is defined in the User model
+    chat_rooms = user.chat_rooms
     return render_template('livechat.html', user=user, chat_rooms=chat_rooms)
 
 @app.route('/search_user')
@@ -205,7 +204,6 @@ def leave_room():
             return jsonify({'error': 'Not authenticated'}), 401
 
         # Implement leave room logic here (e.g., update database if needed)
-
         return jsonify({'message': 'Left room successfully'}), 200
     except Exception as e:
         print(f"Exception in leave_room: {str(e)}")
@@ -242,5 +240,5 @@ def chat_history(room_id):
 
 if __name__ == "__main__":
     with app.app_context():
-        db.create_all()  # Create tables
+        db.create_all()
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True)

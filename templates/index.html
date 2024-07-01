@@ -13,7 +13,7 @@
 
   <link href="/static/styles.css" rel="stylesheet">
 
-  <title>Curiosity!: {% block title %}{% endblock %}</title>
+  <title>ChatApp!: {% block title %}{% endblock %}</title>
 
 </head>
 
@@ -29,7 +29,7 @@
       <div class="collapse navbar-collapse" id="navbar">
         {% if session["user_id"] %}
         <ul class="navbar-nav me-auto mt-2">
-          <li class="nav-item"><a class="nav-link" href="/livechat">Chat Room</a></li>
+          <li class="nav-item"><a class="nav-link" href="/livechat">Room</a></li>
         </ul>
         <ul class="navbar-nav ms-auto mt-2">
           <li class="nav-item"><a class="nav-link" href="/logout">Log Out</a></li>
@@ -43,7 +43,7 @@
       </div>
     </div>
   </nav>
-  <!-- not sure the use of below !-->
+
   {% if get_flashed_messages() %}
   <header>
     <div class="alert alert-primary mb-0 text-center" role="alert">
@@ -55,10 +55,10 @@
     <div id="quote">
       <figure class="text-center">
         <blockquote class="blockquote">
-          <p class="text-light">“The important thing is not to stop questioning. Curiosity has its own reason for existence."</p>
+          <p class="text-light">“To start a communication, click the Room!"</p>
         </blockquote>
         <br>
-        <figcaption class="blockquote-footer"><p class="text-light">Albert Einstein</p>
+        <figcaption class="blockquote-footer"><p class="text-light">Warm Reminder</p>
           <cite title="Source Title"></cite>
         </figcaption>
       </figure>

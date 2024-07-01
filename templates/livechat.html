@@ -19,10 +19,10 @@ Chat Room
                     <ul class="list-unstyled chat-list mt-2 mb-0" id="chat-room-list">
                         {% for chat_room in chat_rooms %}
                         <li class="clearfix chat-room" data-room-id="{{ chat_room.id }}">
-                            <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="avatar">
+                            <img src="https://bootdey.com/img/Content/avatar/avatar5.png" alt="avatar">
                             <div class="about">
                                 <div class="name">{{ chat_room.name }}</div>
-                                <div class="status"> <i class="fa fa-circle offline"></i> Last message time </div>
+                                <div class="status"> <i class="fa fa-circle offline"></i> To be enhanced </div>
                             </div>
                         </li>
                         {% endfor %}
@@ -76,9 +76,10 @@ Chat Room
 
         socket.on('message', function(msg) {
             var chatHistory = document.getElementById('chat-history');
-            var formattedMessage = `<div><strong>${msg.username} [${msg.timestamp}]:</strong><br>${msg.message}</div><br><br>`;
+            var localTimestamp = convertUTCToLocalTime(msg.timestamp);
+            var formattedMessage = `<div><strong>${msg.username} [${localTimestamp}]:</strong><br>${msg.message}</div><br><br>`;
             chatHistory.innerHTML += formattedMessage;
-            chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom
+            chatHistory.scrollTop = chatHistory.scrollHeight;
         });
 
         document.getElementById('message-input').addEventListener('keypress', function(e) {
@@ -92,35 +93,33 @@ Chat Room
             }
         });
 
-
         document.getElementById('user-search-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 var searchTerm = e.target.value;
                 fetch(`/search_user?query=${searchTerm}`)
                     .then(response => response.json())
                     .then(data => {
-                        // Check if data is an array before using forEach
-                        if (Array.isArray(data)) {
-                            var chatRoomList = document.getElementById('chat-room-list');
-                            chatRoomList.innerHTML = '';
+                        var chatRoomList = document.getElementById('chat-room-list');
+                        chatRoomList.innerHTML = '';
+                        if (Array.isArray(data) && data.length > 0) {
                             data.forEach(user => {
                                 var listItem = document.createElement('li');
                                 listItem.className = 'clearfix chat-room';
                                 listItem.dataset.userId = user.id;
                                 listItem.innerHTML = `
-                                    <img src="https://bootdey.com/img/Content/avatar/avatar1.png" alt="avatar">
-                                    <div class="about">
-                                        <div class="name">${user.username}</div>
-                                        <div class="status"> <i class="fa fa-circle offline"></i> Last seen at ${user.last_seen}</div>
-                                    </div>
-                                `;
+                            <img src="https://bootdey.com/img/Content/avatar/avatar3.png" alt="avatar">
+                            <div class="about">
+                                <div class="name">${user.username}</div>
+                                <div class="status"> <i class="fa fa-circle offline"></i> Last seen at "to be enhanced"</div>
+                            </div>
+                        `;
                                 listItem.addEventListener('click', function() {
                                     initiateChat(user.id);
                                 });
                                 chatRoomList.appendChild(listItem);
                             });
                         } else {
-                            console.error('Invalid data format:', data);
+                            alert('Invalid User Input');
                         }
                     })
                     .catch(error => {
@@ -129,6 +128,7 @@ Chat Room
             }
         });
 
+
         function fetchChatHistory(roomId) {
             fetch(`/chat_history/${roomId}`)
                 .then(response => response.json())
@@ -136,16 +136,16 @@ Chat Room
                     var chatHistory = document.getElementById('chat-history');
                     chatHistory.innerHTML = '';
                     messages.forEach(msg => {
-                        var formattedMessage = `<div><strong>${msg.username} [${msg.timestamp}]:</strong><br>${msg.content}</div><br><br>`;
+                        var localTimestamp = convertUTCToLocalTime(msg.timestamp);
+                        var formattedMessage = `<div><strong>${msg.username} [${localTimestamp}]:</strong><br>${msg.content}</div><br><br>`;
                         chatHistory.innerHTML += formattedMessage;
                     });
-                    chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
                 })
                 .catch(error => {
                     console.error('Error fetching chat history:', error);
                 });
         }
-
 
         function initiateChat(userId) {
             fetch(`/initiate_chat`, {
@@ -166,17 +166,20 @@ Chat Room
                 });
         }
 
-        // Handle leaving the room on page unload or close
         window.addEventListener('beforeunload', function(event) {
             leaveCurrentRoom(currentRoomId);
         });
 
-        // Handle socket events for leaving a room
         socket.on('user_left', function(data) {
             var chatHistory = document.getElementById('chat-history');
-            chatHistory.innerHTML += '<div>' + data.message + '</div><br><br>'; // Add two <br> tags
-            chatHistory.scrollTop = chatHistory.scrollHeight; // Scroll to bottom
+            chatHistory.innerHTML += '<div>' + data.message + '</div><br><br>';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
         });
+
+        function convertUTCToLocalTime(utcTimestamp) {
+            var date = new Date(utcTimestamp + 'Z');
+            return date.toLocaleString();
+        }
     });
 </script>
 
