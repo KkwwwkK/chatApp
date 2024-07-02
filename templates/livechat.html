@@ -22,7 +22,7 @@ Chat Room
                             <img src="https://bootdey.com/img/Content/avatar/avatar5.png" alt="avatar">
                             <div class="about">
                                 <div class="name">{{ chat_room.name }}</div>
-                                <div class="status"> <i class="fa fa-circle offline"></i> To be enhanced </div>
+                                <div class="status"> <i class="fa fa-circle offline"></i> subscribe to show </div>
                             </div>
                         </li>
                         {% endfor %}
@@ -45,6 +45,8 @@ Chat Room
         </div>
     </div>
 </div>
+
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         var socket = io.connect('http://' + document.domain + ':' + location.port);
@@ -110,7 +112,7 @@ Chat Room
                             <img src="https://bootdey.com/img/Content/avatar/avatar3.png" alt="avatar">
                             <div class="about">
                                 <div class="name">${user.username}</div>
-                                <div class="status"> <i class="fa fa-circle offline"></i> Last seen at "to be enhanced"</div>
+                                <div class="status"> <i class="fa fa-circle offline"></i> Last seen at "???"</div>
                             </div>
                         `;
                                 listItem.addEventListener('click', function() {
