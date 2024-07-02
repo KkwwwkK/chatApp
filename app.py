@@ -10,9 +10,14 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
-socketio = SocketIO(app)
 
-CORS(app)
+# socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# deploy
+# CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_PERMANENT"] = False
