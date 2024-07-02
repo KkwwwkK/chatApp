@@ -49,7 +49,9 @@ Chat Room
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        // var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var socket = io.connect('http://ec2-54-179-255-198.ap-southeast-1.compute.amazonaws.com');
+
         var currentRoomId = null;
 
         document.querySelectorAll('.chat-room').forEach(function(element) {
