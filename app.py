@@ -5,11 +5,14 @@ from functools import wraps
 from models import db, User, ChatRoom, Message
 from flask_socketio import SocketIO, join_room, leave_room, send
 from datetime import datetime
+from flask_cors import CORS
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 socketio = SocketIO(app)
+
+CORS(app)
 
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_PERMANENT"] = False
