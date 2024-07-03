@@ -309,146 +309,306 @@ Chat Room
     </div>
 </div>
 
-
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // var socket = io.connect('http://' + document.domain + ':' + location.port);
-        var socket = io.connect('http://ec2-54-179-255-198.ap-southeast-1.compute.amazonaws.com');
+        setTimeout(function() {
+            // Ensure using HTTPS for WebSocket protocol
+            var socketProtocol = (window.location.protocol === 'https:') ? 'wss://' : 'ws://';
+            var socket = io.connect(socketProtocol + 'ec2-54-179-255-198.ap-southeast-1.compute.amazonaws.com', {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000
+            });
 
-        var currentRoomId = null;
+            var currentRoomId = null;
 
-        document.querySelectorAll('.chat-room').forEach(function(element) {
-            element.addEventListener('click', function() {
-                var newRoomId = this.getAttribute('data-room-id');
-                if (currentRoomId !== newRoomId) {
-                    leaveCurrentRoom(currentRoomId);
-                    currentRoomId = newRoomId;
-                    socket.emit('join', {
+            document.querySelectorAll('.chat-room').forEach(function(element) {
+                element.addEventListener('click', function() {
+                    var newRoomId = this.getAttribute('data-room-id');
+                    if (currentRoomId !== newRoomId) {
+                        leaveCurrentRoom(currentRoomId);
+                        currentRoomId = newRoomId;
+                        socket.emit('join', {
+                            username: "{{ user.username }}",
+                            room: currentRoomId
+                        });
+                        fetchChatHistory(currentRoomId);
+                    }
+                });
+            });
+
+            function leaveCurrentRoom(roomId) {
+                if (roomId) {
+                    socket.emit('leave', {
                         username: "{{ user.username }}",
-                        room: currentRoomId
+                        room: roomId
                     });
-                    fetchChatHistory(currentRoomId);
+                }
+            }
+
+            socket.on('connect', function() {
+                console.log('WebSocket connected');
+            });
+
+            socket.on('disconnect', function(reason) {
+                console.log('WebSocket disconnected:', reason);
+            });
+
+            socket.on('connect_error', function(error) {
+                console.log('WebSocket connection error:', error);
+            });
+
+            socket.on('message', function(msg) {
+                var chatHistory = document.getElementById('chat-history');
+                var localTimestamp = convertUTCToLocalTime(msg.timestamp);
+                var formattedMessage = `<div><strong>${msg.username} [${localTimestamp}]:</strong><br>${msg.message}</div><br><br>`;
+                chatHistory.innerHTML += formattedMessage;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            });
+
+            document.getElementById('message-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    var message = e.target.value;
+                    socket.emit('message', {
+                        room: currentRoomId,
+                        message: message
+                    });
+                    e.target.value = '';
                 }
             });
-        });
 
-        function leaveCurrentRoom(roomId) {
-            if (roomId) {
-                socket.emit('leave', {
-                    username: "{{ user.username }}",
-                    room: roomId
-                });
-            }
-        }
-
-        socket.on('message', function(msg) {
-            var chatHistory = document.getElementById('chat-history');
-            var localTimestamp = convertUTCToLocalTime(msg.timestamp);
-            var formattedMessage = `<div><strong>${msg.username} [${localTimestamp}]:</strong><br>${msg.message}</div><br><br>`;
-            chatHistory.innerHTML += formattedMessage;
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        });
-
-        document.getElementById('message-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                var message = e.target.value;
-                socket.emit('message', {
-                    room: currentRoomId,
-                    message: message
-                });
-                e.target.value = '';
-            }
-        });
-
-        document.getElementById('user-search-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                var searchTerm = e.target.value;
-                fetch(`/search_user?query=${searchTerm}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        var chatRoomList = document.getElementById('chat-room-list');
-                        chatRoomList.innerHTML = '';
-                        if (Array.isArray(data) && data.length > 0) {
-                            data.forEach(user => {
-                                var listItem = document.createElement('li');
-                                listItem.className = 'clearfix chat-room';
-                                listItem.dataset.userId = user.id;
-                                listItem.innerHTML = `
-                            <img src="https://bootdey.com/img/Content/avatar/avatar3.png" alt="avatar">
-                            <div class="about">
-                                <div class="name">${user.username}</div>
-                                <div class="status"> <i class="fa fa-circle offline"></i> Last seen at "???"</div>
-                            </div>
-                        `;
-                                listItem.addEventListener('click', function() {
-                                    initiateChat(user.id);
+            document.getElementById('user-search-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    var searchTerm = e.target.value;
+                    fetch(`/search_user?query=${searchTerm}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            var chatRoomList = document.getElementById('chat-room-list');
+                            chatRoomList.innerHTML = '';
+                            if (Array.isArray(data) && data.length > 0) {
+                                data.forEach(user => {
+                                    var listItem = document.createElement('li');
+                                    listItem.className = 'clearfix chat-room';
+                                    listItem.dataset.userId = user.id;
+                                    listItem.innerHTML = `
+                                    <img src="https://bootdey.com/img/Content/avatar/avatar3.png" alt="avatar">
+                                    <div class="about">
+                                        <div class="name">${user.username}</div>
+                                        <div class="status"> <i class="fa fa-circle offline"></i> Last seen at "???"</div>
+                                    </div>
+                                `;
+                                    listItem.addEventListener('click', function() {
+                                        initiateChat(user.id);
+                                    });
+                                    chatRoomList.appendChild(listItem);
                                 });
-                                chatRoomList.appendChild(listItem);
-                            });
-                        } else {
-                            alert('Invalid User Input');
-                        }
+                            } else {
+                                alert('Invalid User Input');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching users:', error);
+                        });
+                }
+            });
+
+            function fetchChatHistory(roomId) {
+                fetch(`/chat_history/${roomId}`)
+                    .then(response => response.json())
+                    .then(messages => {
+                        var chatHistory = document.getElementById('chat-history');
+                        chatHistory.innerHTML = '';
+                        messages.forEach(msg => {
+                            var localTimestamp = convertUTCToLocalTime(msg.timestamp);
+                            var formattedMessage = `<div><strong>${msg.username} [${localTimestamp}]:</strong><br>${msg.content}</div><br><br>`;
+                            chatHistory.innerHTML += formattedMessage;
+                        });
+                        chatHistory.scrollTop = chatHistory.scrollHeight;
                     })
                     .catch(error => {
-                        console.error('Error fetching users:', error);
+                        console.error('Error fetching chat history:', error);
                     });
             }
-        });
 
-
-        function fetchChatHistory(roomId) {
-            fetch(`/chat_history/${roomId}`)
-                .then(response => response.json())
-                .then(messages => {
-                    var chatHistory = document.getElementById('chat-history');
-                    chatHistory.innerHTML = '';
-                    messages.forEach(msg => {
-                        var localTimestamp = convertUTCToLocalTime(msg.timestamp);
-                        var formattedMessage = `<div><strong>${msg.username} [${localTimestamp}]:</strong><br>${msg.content}</div><br><br>`;
-                        chatHistory.innerHTML += formattedMessage;
-                    });
-                    chatHistory.scrollTop = chatHistory.scrollHeight;
+            function initiateChat(userId) {
+                fetch(`/initiate_chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ user_id: userId })
                 })
-                .catch(error => {
-                    console.error('Error fetching chat history:', error);
-                });
-        }
-
-        function initiateChat(userId) {
-            fetch(`/initiate_chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ user_id: userId })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    currentRoomId = data.room_id;
-                    socket.emit('join', {
-                        username: "{{ user.username }}",
-                        room: currentRoomId
+                    .then(response => response.json())
+                    .then(data => {
+                        currentRoomId = data.room_id;
+                        socket.emit('join', {
+                            username: "{{ user.username }}",
+                            room: currentRoomId
+                        });
+                        fetchChatHistory(currentRoomId);
                     });
-                    fetchChatHistory(currentRoomId);
-                });
-        }
+            }
 
-        window.addEventListener('beforeunload', function(event) {
-            leaveCurrentRoom(currentRoomId);
-        });
+            window.addEventListener('beforeunload', function(event) {
+                leaveCurrentRoom(currentRoomId);
+            });
 
-        socket.on('user_left', function(data) {
-            var chatHistory = document.getElementById('chat-history');
-            chatHistory.innerHTML += '<div>' + data.message + '</div><br><br>';
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        });
+            socket.on('user_left', function(data) {
+                var chatHistory = document.getElementById('chat-history');
+                chatHistory.innerHTML += '<div>' + data.message + '</div><br><br>';
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            });
 
-        function convertUTCToLocalTime(utcTimestamp) {
-            var date = new Date(utcTimestamp + 'Z');
-            return date.toLocaleString();
-        }
+            function convertUTCToLocalTime(utcTimestamp) {
+                var date = new Date(utcTimestamp + 'Z');
+                return date.toLocaleString();
+            }
+        }, 1000); // Delay for 1 second before connecting
     });
 </script>
+
+
+<!--<script>-->
+<!--    document.addEventListener("DOMContentLoaded", function() {-->
+<!--        // var socket = io.connect('http://' + document.domain + ':' + location.port);-->
+<!--        var socket = io.connect('http://ec2-54-179-255-198.ap-southeast-1.compute.amazonaws.com');-->
+
+<!--        var currentRoomId = null;-->
+
+<!--        document.querySelectorAll('.chat-room').forEach(function(element) {-->
+<!--            element.addEventListener('click', function() {-->
+<!--                var newRoomId = this.getAttribute('data-room-id');-->
+<!--                if (currentRoomId !== newRoomId) {-->
+<!--                    leaveCurrentRoom(currentRoomId);-->
+<!--                    currentRoomId = newRoomId;-->
+<!--                    socket.emit('join', {-->
+<!--                        username: "{{ user.username }}",-->
+<!--                        room: currentRoomId-->
+<!--                    });-->
+<!--                    fetchChatHistory(currentRoomId);-->
+<!--                }-->
+<!--            });-->
+<!--        });-->
+
+<!--        function leaveCurrentRoom(roomId) {-->
+<!--            if (roomId) {-->
+<!--                socket.emit('leave', {-->
+<!--                    username: "{{ user.username }}",-->
+<!--                    room: roomId-->
+<!--                });-->
+<!--            }-->
+<!--        }-->
+
+<!--        socket.on('message', function(msg) {-->
+<!--            var chatHistory = document.getElementById('chat-history');-->
+<!--            var localTimestamp = convertUTCToLocalTime(msg.timestamp);-->
+<!--            var formattedMessage = `<div><strong>${msg.username} [${localTimestamp}]:</strong><br>${msg.message}</div><br><br>`;-->
+<!--            chatHistory.innerHTML += formattedMessage;-->
+<!--            chatHistory.scrollTop = chatHistory.scrollHeight;-->
+<!--        });-->
+
+<!--        document.getElementById('message-input').addEventListener('keypress', function(e) {-->
+<!--            if (e.key === 'Enter') {-->
+<!--                var message = e.target.value;-->
+<!--                socket.emit('message', {-->
+<!--                    room: currentRoomId,-->
+<!--                    message: message-->
+<!--                });-->
+<!--                e.target.value = '';-->
+<!--            }-->
+<!--        });-->
+
+<!--        document.getElementById('user-search-input').addEventListener('keypress', function(e) {-->
+<!--            if (e.key === 'Enter') {-->
+<!--                var searchTerm = e.target.value;-->
+<!--                fetch(`/search_user?query=${searchTerm}`)-->
+<!--                    .then(response => response.json())-->
+<!--                    .then(data => {-->
+<!--                        var chatRoomList = document.getElementById('chat-room-list');-->
+<!--                        chatRoomList.innerHTML = '';-->
+<!--                        if (Array.isArray(data) && data.length > 0) {-->
+<!--                            data.forEach(user => {-->
+<!--                                var listItem = document.createElement('li');-->
+<!--                                listItem.className = 'clearfix chat-room';-->
+<!--                                listItem.dataset.userId = user.id;-->
+<!--                                listItem.innerHTML = `-->
+<!--                            <img src="https://bootdey.com/img/Content/avatar/avatar3.png" alt="avatar">-->
+<!--                            <div class="about">-->
+<!--                                <div class="name">${user.username}</div>-->
+<!--                                <div class="status"> <i class="fa fa-circle offline"></i> Last seen at "???"</div>-->
+<!--                            </div>-->
+<!--                        `;-->
+<!--                                listItem.addEventListener('click', function() {-->
+<!--                                    initiateChat(user.id);-->
+<!--                                });-->
+<!--                                chatRoomList.appendChild(listItem);-->
+<!--                            });-->
+<!--                        } else {-->
+<!--                            alert('Invalid User Input');-->
+<!--                        }-->
+<!--                    })-->
+<!--                    .catch(error => {-->
+<!--                        console.error('Error fetching users:', error);-->
+<!--                    });-->
+<!--            }-->
+<!--        });-->
+
+
+<!--        function fetchChatHistory(roomId) {-->
+<!--            fetch(`/chat_history/${roomId}`)-->
+<!--                .then(response => response.json())-->
+<!--                .then(messages => {-->
+<!--                    var chatHistory = document.getElementById('chat-history');-->
+<!--                    chatHistory.innerHTML = '';-->
+<!--                    messages.forEach(msg => {-->
+<!--                        var localTimestamp = convertUTCToLocalTime(msg.timestamp);-->
+<!--                        var formattedMessage = `<div><strong>${msg.username} [${localTimestamp}]:</strong><br>${msg.content}</div><br><br>`;-->
+<!--                        chatHistory.innerHTML += formattedMessage;-->
+<!--                    });-->
+<!--                    chatHistory.scrollTop = chatHistory.scrollHeight;-->
+<!--                })-->
+<!--                .catch(error => {-->
+<!--                    console.error('Error fetching chat history:', error);-->
+<!--                });-->
+<!--        }-->
+
+<!--        function initiateChat(userId) {-->
+<!--            fetch(`/initiate_chat`, {-->
+<!--                method: 'POST',-->
+<!--                headers: {-->
+<!--                    'Content-Type': 'application/json'-->
+<!--                },-->
+<!--                body: JSON.stringify({ user_id: userId })-->
+<!--            })-->
+<!--                .then(response => response.json())-->
+<!--                .then(data => {-->
+<!--                    currentRoomId = data.room_id;-->
+<!--                    socket.emit('join', {-->
+<!--                        username: "{{ user.username }}",-->
+<!--                        room: currentRoomId-->
+<!--                    });-->
+<!--                    fetchChatHistory(currentRoomId);-->
+<!--                });-->
+<!--        }-->
+
+<!--        window.addEventListener('beforeunload', function(event) {-->
+<!--            leaveCurrentRoom(currentRoomId);-->
+<!--        });-->
+
+<!--        socket.on('user_left', function(data) {-->
+<!--            var chatHistory = document.getElementById('chat-history');-->
+<!--            chatHistory.innerHTML += '<div>' + data.message + '</div><br><br>';-->
+<!--            chatHistory.scrollTop = chatHistory.scrollHeight;-->
+<!--        });-->
+
+<!--        function convertUTCToLocalTime(utcTimestamp) {-->
+<!--            var date = new Date(utcTimestamp + 'Z');-->
+<!--            return date.toLocaleString();-->
+<!--        }-->
+<!--    });-->
+<!--</script>-->
 
 
 {% endblock %}
