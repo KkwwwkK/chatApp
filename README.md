@@ -1,5 +1,5 @@
 # Live Chat Application
-#### web url:  <URL https://ec2-54-179-255-198.ap-southeast-1.compute.amazonaws.com>
+#### web url:  < URL https://ec2-54-179-255-198.ap-southeast-1.compute.amazonaws.com >
 #### Description: A real-time web application for live chat functionality using Flask and WebSocket.
 
 ## Brief
