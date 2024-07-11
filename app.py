@@ -25,7 +25,7 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Database configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://admin:password@fsse-ken-mysql.c7u2gmuw4a44.ap-southeast-1.rds.amazonaws.com:3306/Chat_APP_RaftAHill"
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://(username):(pw)@fsse-ken-mysql.c7u2gmuw4a44.ap-southeast-1.rds.amazonaws.com:3306/Chat_APP_RaftAHill"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
